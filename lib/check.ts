@@ -80,7 +80,14 @@ export async function runCheck(m: Monitor): Promise<{ snapshot: string; schema: 
     return { snapshot: await scrapePage(m.url), schema: null };
   }
   if (m.schema) {
-    return { snapshot: canonicalJson(await extractWatched(m.url, m.watch, m.schema)), schema: m.schema };
+    const extract = async () => canonicalJson(await extractWatched(m.url, m.watch, m.schema));
+    const first = await extract();
+    if (m.snapshot === null || first === m.snapshot) return { snapshot: first, schema: m.schema };
+    // Looks changed. AI extraction can still read an open-ended field
+    // differently between runs, so confirm with a second run: only a result
+    // that repeats counts as a change; anything else keeps the old snapshot.
+    const second = await extract();
+    return { snapshot: second === first ? first : m.snapshot, schema: m.schema };
   }
   // First check: learn the shape, then extract again with it so the baseline
   // is already in the locked format every later run will use.
@@ -111,7 +118,10 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(sort(value), null, 2);
 }
 
-/** Every leaf becomes a string "exactly as shown", so formatting can't drift. */
+/**
+ * Every leaf becomes a string "exactly as shown", so formatting can't drift,
+ * with the first run's value as an example so the field keeps its meaning.
+ */
 function inferSchema(value: unknown): object {
   if (Array.isArray(value)) {
     const sample = value.find((v) => v != null);
@@ -127,7 +137,8 @@ function inferSchema(value: unknown): object {
       required: keys,
     };
   }
-  return { type: "string", description: "Exactly as shown on the page" };
+  const example = value == null ? "" : ` (for example: ${JSON.stringify(String(value).slice(0, 60))})`;
+  return { type: "string", description: `Exactly as shown on the page${example}` };
 }
 
 const CONTEXT_LINES = 2;

@@ -17,7 +17,7 @@ every 30s ──► due monitors, one at a time
 ```
 
 - **First check saves a baseline.** Later checks are compared to it, line by line.
-- **Stable AI extraction.** Extracting with only a prompt can format the same data differently between runs (`"£51.77"` vs `51.77`), which would look like a change. On the first check the app learns the shape of the result and locks it as a JSON Schema, so every later run returns the same format.
+- **Stable AI extraction.** Extracting with only a prompt can format the same data differently between runs (`"£51.77"` vs `51.77`), or read a vague field differently (`"Bar widget"` vs `"Omarchy Quattro"`), which would look like a change. On the first check the app locks the result's shape as a JSON Schema, with the first values as examples. When a later check looks different, it extracts once more and only reports the change if it repeats.
 - **Pages that fail to load are errors, not changes.** A 404, 500 or DNS failure shows up as a failed check and is retried in 5 minutes.
 - **Checks run one at a time**, with a 3 minute timeout each, so usage stays predictable and the free plan's single browser is enough.
 
@@ -46,5 +46,5 @@ When a change is found, the app POSTs JSON to your webhook. Slack and Discord in
 
 ## Notes
 
-- Each check is one Hyperbrowser scrape or extract job (the first check of a "what to watch" monitor runs extract twice to lock the schema).
+- Each check is one Hyperbrowser scrape or extract job. "What to watch" monitors run extract twice on the first check (to lock the schema) and when confirming a possible change.
 - There is no login: run it for yourself, don't expose it publicly.
