@@ -2,7 +2,11 @@
 
 **Built with [Hyperbrowser](https://hyperbrowser.ai)**
 
-Check any page on a schedule and see exactly what changed. Optionally describe what to watch ("the price of every plan") and get a webhook when it changes. Only needs a Hyperbrowser API key.
+Check any page on a schedule and see exactly what changed.
+
+![Adding a monitor, checking it, and viewing the diff](docs/demo.gif)
+
+<sub>Demo uses httpbin.org/uuid, which returns a new value on every load.</sub> Optionally describe what to watch ("the price of every plan") and get a webhook when it changes. Only needs a Hyperbrowser API key.
 
 ## How it works
 

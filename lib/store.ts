@@ -4,7 +4,7 @@ import type { Change, Monitor } from "./types";
 
 type Db = { monitors: Monitor[]; changes: Change[] };
 
-const DB_PATH = path.join(process.cwd(), "data", "db.json");
+const DB_PATH = path.join(process.env.HYPER_MONITOR_DATA_DIR || path.join(process.cwd(), "data"), "db.json");
 
 // One writer at a time: every mutation is chained onto this promise. Kept on
 // globalThis because Next.js may load this module in more than one bundle.
