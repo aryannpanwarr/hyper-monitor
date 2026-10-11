@@ -1,6 +1,6 @@
 # Hyper Monitor
 
-**Built with [Hyperbrowser](https://hyperbrowser.ai)**
+**Built with [Hyperbrowser](https://hyperbrowser.ai)** · [Live demo](https://hyper-monitor-three.vercel.app)
 
 Check any page on a schedule and see exactly what changed.
 
