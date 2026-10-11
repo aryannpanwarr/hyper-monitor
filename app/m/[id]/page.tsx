@@ -3,20 +3,22 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { api, isChecking, statusText, type PublicMonitor } from "@/lib/client";
 import { ago, FREQUENCY_LABELS, shortUrl, until } from "@/lib/format";
-import type { Change, Monitor } from "@/lib/types";
+import type { Change } from "@/lib/types";
 
-type Detail = { monitor: Omit<Monitor, "schema">; changes: Change[] };
+type Detail = { monitor: PublicMonitor & { snapshot: string | null }; changes: Change[] };
 
 export default function MonitorPage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<Detail | null>(null);
   const [missing, setMissing] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/monitors/${id}`, { cache: "no-store" });
+    const res = await api<Detail>(`/api/monitors/${id}`);
     if (res.status === 404) return setMissing(true);
-    setData(await res.json());
+    if (res.ok) setData(res.data);
   }, [id]);
 
   useEffect(() => {
@@ -26,7 +28,9 @@ export default function MonitorPage() {
   }, [load]);
 
   async function runNow() {
-    await fetch(`/api/monitors/${id}/run`, { method: "POST" });
+    setNotice("");
+    const { ok, data } = await api(`/api/monitors/${id}/run`, { method: "POST" });
+    if (!ok) setNotice(data.error ?? "Something went wrong");
     void load();
   }
 
@@ -41,6 +45,7 @@ export default function MonitorPage() {
 
   const { monitor: m, changes } = data;
   const status = m.paused ? "paused" : m.lastStatus;
+  const checking = isChecking(m);
 
   return (
     <>
@@ -53,21 +58,21 @@ export default function MonitorPage() {
           {m.watch && <p className="sub">Watching: {m.watch}</p>}
           <p className="meta" style={{ margin: "6px 0 0", display: "flex", alignItems: "center", gap: 8 }}>
             <span className={`dot ${status}`} />
-            {FREQUENCY_LABELS[m.frequency]} ·{" "}
-            {m.lastStatus === "pending" ? "checking…" : `checked ${ago(m.lastCheckedAt)}`}
-            {!m.paused && m.lastStatus !== "pending" && ` · next in ${until(m.nextRunAt)}`}
+            {FREQUENCY_LABELS[m.frequency]} · {statusText(m)}
+            {!m.paused && !checking && ` · next in ${until(m.nextRunAt)}`}
             {m.paused && " · paused"}
           </p>
         </div>
         {!m.paused && (
-          <button onClick={runNow} disabled={m.lastStatus === "pending"}>
+          <button onClick={runNow} disabled={checking}>
             Check now
           </button>
         )}
       </div>
 
+      {notice && <div className="note err">{notice}</div>}
       {m.lastStatus === "error" && m.lastError && (
-        <div className="note err">Last check failed: {m.lastError}. Retrying soon.</div>
+        <div className="note err">Last check failed: {m.lastError}.</div>
       )}
 
       <h2>Changes</h2>

@@ -33,7 +33,15 @@ cp .env.example .env.local   # add your HYPERBROWSER_API_KEY
 npm run build && npm start   # http://localhost:3000
 ```
 
-The scheduler starts with the server, so keep it running (any always-on Node host works: a VPS, Railway, Render, Fly). Serverless hosts that stop between requests won't run the schedule. Data is stored in `data/db.json`.
+The scheduler starts with the server, so keep it running. Data is stored in `data/db.json`.
+
+## Deploy on Vercel
+
+Vercel doesn't keep a server running or files on disk, so the deployed app uses:
+
+- **Upstash Redis** for storage: add it from the Vercel Marketplace; it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+- **`/api/cron`** to run due checks, called every 15 minutes by the included GitHub Actions workflow (and daily by Vercel Cron as a backup). Set `CRON_SECRET` in Vercel, the same value as a repo secret `CRON_SECRET`, and your deployment URL as a repo variable `APP_URL`.
+- **`OWNER_KEY`** to make it a public demo: visitors can add up to 5 pages (checked every 6 hours or daily, removed after 24 hours, no webhooks, 50 checks a day in total), and your own monitors are protected. Open the site once with `?key=YOUR_OWNER_KEY` to unlock full access in that browser.
 
 ## Webhooks
 

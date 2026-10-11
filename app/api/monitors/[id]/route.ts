@@ -1,3 +1,4 @@
+import { demoEnabled, isOwner } from "@/lib/demo";
 import { getDb, update } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -9,24 +10,40 @@ export async function GET(_req: Request, { params }: Ctx) {
   const db = await getDb();
   const monitor = db.monitors.find((m) => m.id === id);
   if (!monitor) return Response.json({ error: "Not found" }, { status: 404 });
-  const { schema, ...rest } = monitor;
-  return Response.json({ monitor: rest, changes: db.changes.filter((c) => c.monitorId === id) });
+  const { schema, webhookUrl, ...rest } = monitor;
+  return Response.json({
+    monitor: { ...rest, hasWebhook: Boolean(webhookUrl) },
+    changes: db.changes.filter((c) => c.monitorId === id),
+  });
+}
+
+/** Visitors can manage the demo pages they add, not the owner's. */
+async function guard(req: Request, id: string) {
+  const m = (await getDb()).monitors.find((x) => x.id === id);
+  if (!m) return Response.json({ error: "Not found" }, { status: 404 });
+  if (demoEnabled() && m.owner && !isOwner(req)) {
+    return Response.json({ error: "Only the owner can change this monitor" }, { status: 403 });
+  }
+  return null;
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
   const { id } = await params;
+  const denied = await guard(req, id);
+  if (denied) return denied;
   const { paused } = await req.json().catch(() => ({}));
   if (typeof paused !== "boolean") return Response.json({ error: "Expected { paused: boolean }" }, { status: 400 });
-  const found = await update((db) => {
+  await update((db) => {
     const m = db.monitors.find((x) => x.id === id);
     if (m) m.paused = paused;
-    return Boolean(m);
   });
-  return found ? Response.json({ ok: true }) : Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json({ ok: true });
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
   const { id } = await params;
+  const denied = await guard(req, id);
+  if (denied) return denied;
   await update((db) => {
     db.monitors = db.monitors.filter((m) => m.id !== id);
     db.changes = db.changes.filter((c) => c.monitorId !== id);

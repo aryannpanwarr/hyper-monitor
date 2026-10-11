@@ -1,0 +1,19 @@
+# Runs due checks on the Vercel deployment every 15 minutes.
+# Set the repo secret CRON_SECRET and the repo variable APP_URL.
+name: checks
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    if: ${{ vars.APP_URL != '' }}
+    steps:
+      - name: Run due checks
+        run: >
+          curl -fsS --max-time 290
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          "${{ vars.APP_URL }}/api/cron"
